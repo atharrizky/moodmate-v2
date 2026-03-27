@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+Thumbs.db
 
 # debug
 npm-debug.log*
@@ -30,8 +31,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files (SANGAT PENTING: Jangan ubah ini agar password Supabase aman)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +41,27 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Editor directories and files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Supabase Local (Jika nanti pakai CLI Supabase)
+supabase/.temp/
+supabase/.branch/
+
+# Python (Jika ada script tambahan)
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
