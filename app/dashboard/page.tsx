@@ -302,16 +302,6 @@ export default function Dashboard() {
     }
   }
 
-  // FUNGSI UNTUK DEBUG REPLAY INTRO
-  const replayIntro = () => {
-    setDialogueStep(0);
-    setShowOnboarding(true);
-    // Reset Status Onboarding di Database biar bisa tes ulang beneran
-    if(user?.id) {
-      supabase.from('profiles').update({ has_seen_onboarding: false }).eq('id', user.id).then();
-    }
-  }
-
   if (!user) return (
     <div className="min-h-screen bg-transparent flex flex-col items-center justify-center text-slate-800 dark:text-white transition-colors duration-300">
       <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -327,11 +317,11 @@ export default function Dashboard() {
 
       <main className="max-w-5xl mx-auto pt-[100px] px-4 sm:px-6 pb-24 w-full overflow-hidden">
         
-        {/* HEADER DENGAN TOMBOL DEBUG REPLAY */}
+        {/* HEADER */}
         <div className="mb-6 sm:mb-8 mt-4 md:mt-0 animate-fade-in-up flex justify-between items-start">
           <div>
             {user.entries.length === 0 ? (
-              // GREETING UNTUK AKUN BARU (VERSI LUCU)
+              // GREETING UNTUK AKUN BARU
               <>
                 <h1 className="text-3xl sm:text-4xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-orange-400 dark:from-rose-400 dark:to-orange-300 drop-shadow-sm flex items-center gap-3">
                   Mulai Ceritamu, {user.name} 🐾
@@ -352,15 +342,6 @@ export default function Dashboard() {
               </>
             )}
           </div>
-
-          {/* TOMBOL DEBUG REPLAY INTRO */}
-          <button
-            onClick={replayIntro}
-            className="text-xs font-bold bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 px-3 py-1.5 rounded-full backdrop-blur-sm transition-all shadow-sm flex items-center gap-1 shrink-0"
-            title="Replay Intro (Hanya untuk testing)"
-          >
-            <span>🔁</span> Intro
-          </button>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
