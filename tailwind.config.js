@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: "class", // <--- INI BARIS YANG DITAMBAHKAN
   content: [
     "./app/**/*.{js,ts,jsx,tsx}",
     "./components/**/*.{js,ts,jsx,tsx}",
@@ -18,4 +19,4 @@ module.exports = {
     },
   },
   plugins: [],
-} 
+}

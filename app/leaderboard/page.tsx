@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-import Link from "next/link" // <-- INI YANG TADI KELUPAAN
+import Link from "next/link" 
 
 export default function Leaderboard() {
   const router = useRouter()
@@ -218,53 +218,59 @@ export default function Leaderboard() {
     }
   }
 
-  if (loading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Memuat Peringkat...</div>
+  if (loading) return (
+    <div className="min-h-screen bg-transparent flex flex-col items-center justify-center text-slate-800 dark:text-white">
+       <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+       <p className="animate-pulse font-bold text-indigo-600 dark:text-indigo-400">Memuat Peringkat...</p>
+    </div>
+  )
 
   return (
-    <div className="min-h-screen bg-background text-white pb-20">
+    <div className="min-h-screen bg-transparent text-slate-900 dark:text-white pb-20 transition-colors duration-300">
       <Navbar />
 
-      <div className="max-w-4xl mx-auto pt-[100px] px-5">
+      <div className="max-w-4xl mx-auto pt-[100px] px-5 relative z-10">
         
-        <div className="bg-[#111827] border border-gray-800 p-6 rounded-2xl mb-8 shadow-lg">
-           <h2 className="text-xl font-bold mb-2">Cari Teman 🔍</h2>
-           <p className="text-sm text-gray-400 mb-4">Tambahkan teman untuk saling adu Streak konsistensi!</p>
+        {/* CARI TEMAN */}
+        <div className="bg-white/80 dark:bg-[#13192B]/80 backdrop-blur-md border border-slate-200 dark:border-indigo-500/20 p-6 sm:p-8 rounded-[2.5rem] mb-8 shadow-sm">
+           <h2 className="text-xl sm:text-2xl font-black mb-2 text-slate-800 dark:text-white">Cari Teman 🔍</h2>
+           <p className="text-sm text-slate-500 dark:text-indigo-200/70 mb-6 font-medium">Tambahkan teman untuk saling adu Streak konsistensi!</p>
            
-           <form onSubmit={handleSearchUser} className="flex gap-3 mb-4">
+           <form onSubmit={handleSearchUser} className="flex flex-col sm:flex-row gap-3 mb-4">
              <input 
                type="text" 
                placeholder="Masukkan username..."
                value={searchQuery}
                onChange={(e) => setSearchQuery(e.target.value)}
-               className="flex-grow bg-[#0f172a] border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary transition"
+               className="flex-grow bg-slate-50 dark:bg-[#0f172a]/80 border border-slate-200 dark:border-indigo-500/30 rounded-2xl px-5 py-3.5 text-slate-800 dark:text-white focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition-all font-medium"
              />
              <button 
                type="submit" 
                disabled={searchLoading || !searchQuery.trim()}
-               className="bg-primary hover:bg-purple-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold px-6 py-3 rounded-xl transition"
+               className="bg-indigo-600 hover:bg-indigo-700 dark:bg-gradient-to-r dark:from-indigo-500 dark:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black px-8 py-3.5 rounded-2xl transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
              >
                {searchLoading ? "Mencari..." : "Cari"}
              </button>
            </form>
 
            {searchResult && (
-             <div className="mt-4 p-4 bg-[#0f172a] border border-primary/50 rounded-xl flex items-center justify-between animate-fade-in-down">
+             <div className="mt-6 p-5 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-500/30 rounded-[1.5rem] flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in-down">
                <div className="flex items-center gap-4">
-                 <div className="w-12 h-12 bg-gray-800 rounded-full flex items-center justify-center border border-gray-600 overflow-hidden">
+                 <div className="w-14 h-14 bg-white dark:bg-[#111827] rounded-full flex items-center justify-center border-2 border-indigo-200 dark:border-indigo-500/50 shadow-sm overflow-hidden">
                     {searchResult.petName ? (
-                      <img src={`/pets/${searchResult.petName}.png`} alt="pet" className="w-8 h-8 object-contain" />
+                      <img src={`/pets/${searchResult.petName}.png`} alt="pet" className="w-10 h-10 object-contain drop-shadow-md" />
                     ) : (
-                      <span className="text-xl">👤</span>
+                      <span className="text-2xl opacity-50">👤</span>
                     )}
                  </div>
-                 <div>
-                   <h3 className="font-bold text-white">{searchResult.username}</h3>
-                   <span className="text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded-md font-semibold">Lv. {searchResult.level}</span>
+                 <div className="text-center sm:text-left">
+                   <h3 className="font-black text-lg text-slate-800 dark:text-white">{searchResult.username}</h3>
+                   <span className="text-xs bg-indigo-100 dark:bg-indigo-800/50 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-lg font-bold tracking-wide">Lv. {searchResult.level}</span>
                  </div>
                </div>
                <button 
                  onClick={handleAddFriend}
-                 className="bg-green-500 hover:bg-green-600 text-slate-900 font-bold px-4 py-2 rounded-lg transition shadow-md"
+                 className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-black px-6 py-2.5 rounded-xl transition-all shadow-md hover:-translate-y-0.5"
                >
                  + Add Friend
                </button>
@@ -272,28 +278,29 @@ export default function Leaderboard() {
            )}
         </div>
 
+        {/* PENDING REQUESTS */}
         {incomingRequests.length > 0 && (
-          <div className="bg-[#111827] border border-yellow-500/30 p-6 rounded-2xl mb-8 shadow-[0_0_15px_rgba(234,179,8,0.1)]">
-            <h2 className="text-lg font-bold text-yellow-500 mb-4 flex items-center gap-2">
-              <span className="animate-pulse">🔔</span> Permintaan Pertemanan ({incomingRequests.length})
+          <div className="bg-amber-50/90 dark:bg-yellow-900/20 backdrop-blur-md border border-amber-200 dark:border-yellow-500/30 p-6 sm:p-8 rounded-[2.5rem] mb-8 shadow-sm">
+            <h2 className="text-lg font-black text-amber-600 dark:text-yellow-500 mb-5 flex items-center gap-2">
+              <span className="animate-bounce">🔔</span> Permintaan Pertemanan ({incomingRequests.length})
             </h2>
             <div className="flex flex-col gap-3">
               {incomingRequests.map(req => (
-                <div key={req.id} className="bg-[#0f172a] border border-gray-700 p-4 rounded-xl flex items-center justify-between">
-                  <div>
-                    <h3 className="font-bold text-white">{req.username}</h3>
-                    <p className="text-xs text-gray-400">Lv. {req.level} ingin berteman denganmu</p>
+                <div key={req.id} className="bg-white/80 dark:bg-[#0f172a]/60 border border-amber-100 dark:border-yellow-500/20 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="text-center sm:text-left">
+                    <h3 className="font-black text-slate-800 dark:text-white text-lg">{req.username}</h3>
+                    <p className="text-xs text-slate-500 dark:text-yellow-200/60 font-medium">Lv. {req.level} ingin berteman denganmu</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 w-full sm:w-auto">
                     <button 
                       onClick={() => handleAcceptRequest(req.id, req.username)}
-                      className="bg-green-500 hover:bg-green-600 text-slate-900 font-bold px-4 py-2 rounded-lg text-sm transition"
+                      className="flex-1 sm:flex-none bg-green-500 hover:bg-green-600 text-white font-bold px-5 py-2 rounded-xl text-sm transition shadow-sm"
                     >
                       Terima
                     </button>
                     <button 
                       onClick={() => handleRejectRequest(req.id)}
-                      className="bg-gray-700 hover:bg-red-500/20 hover:text-red-400 text-gray-300 font-bold px-4 py-2 rounded-lg text-sm transition"
+                      className="flex-1 sm:flex-none bg-slate-100 hover:bg-red-100 text-slate-500 hover:text-red-500 dark:bg-slate-800 dark:hover:bg-red-500/20 dark:text-slate-400 dark:hover:text-red-400 font-bold px-5 py-2 rounded-xl text-sm transition"
                     >
                       Tolak
                     </button>
@@ -304,60 +311,62 @@ export default function Leaderboard() {
           </div>
         )}
 
+        {/* LEADERBOARD */}
         <div className="text-center mb-8 mt-4">
-          <h1 className="text-3xl sm:text-4xl font-bold mb-2">Papan Peringkat 🏆</h1>
-          <p className="text-gray-400">Peringkat berdasarkan Konsistensi (Streak) tertinggi.</p>
+          <h1 className="text-3xl sm:text-4xl font-black mb-2 text-slate-900 dark:text-white drop-shadow-sm">Papan Peringkat 🏆</h1>
+          <p className="text-slate-500 dark:text-indigo-200/70 font-medium">Peringkat berdasarkan Konsistensi (Streak) tertinggi.</p>
         </div>
 
         <div className="flex flex-col gap-4">
           {users.map((u, index) => {
             const isMe = u.id === currentUserId
-            let rankColor = "bg-gray-800 text-gray-400"
-            if (index === 0) rankColor = "bg-yellow-500/20 text-yellow-400 border border-yellow-500/50"
-            if (index === 1) rankColor = "bg-gray-400/20 text-gray-300 border border-gray-400/50"
-            if (index === 2) rankColor = "bg-orange-600/20 text-orange-400 border border-orange-600/50"
+            
+            // Warna Ranking Lebih Estetik
+            let rankColor = "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
+            if (index === 0) rankColor = "bg-gradient-to-br from-yellow-300 to-amber-500 text-white shadow-md border-2 border-yellow-100 dark:border-yellow-600"
+            if (index === 1) rankColor = "bg-gradient-to-br from-slate-300 to-slate-400 text-white shadow-md border-2 border-slate-100 dark:border-slate-500"
+            if (index === 2) rankColor = "bg-gradient-to-br from-orange-400 to-rose-400 text-white shadow-md border-2 border-orange-100 dark:border-rose-500"
 
             return (
               <div 
                 key={u.id} 
-                className={`bg-[#111827] border ${isMe ? 'border-primary shadow-[0_0_15px_rgba(168,85,247,0.2)]' : 'border-gray-800'} p-4 sm:p-5 rounded-2xl flex items-center gap-4 transition-all hover:bg-[#0f172a] group`}
+                className={`bg-white/80 dark:bg-[#13192B]/80 backdrop-blur-md border ${isMe ? 'border-indigo-400 dark:border-indigo-500 shadow-[0_5px_15px_rgba(99,102,241,0.15)] z-10 scale-[1.01]' : 'border-slate-200 dark:border-indigo-500/20 shadow-sm'} p-4 sm:p-5 rounded-[2rem] flex items-center gap-3 sm:gap-4 transition-all hover:-translate-y-1 hover:shadow-md group`}
               >
-                <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center font-bold ${rankColor}`}>
+                <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center font-black text-lg ${rankColor}`}>
                   {index + 1}
                 </div>
 
                 <div className="relative shrink-0">
-                  <div className={`w-14 h-14 bg-gray-800 rounded-full flex items-center justify-center border-2 overflow-hidden ${u.isActiveToday ? 'border-orange-500' : 'border-gray-700'}`}>
+                  <div className={`w-12 h-12 sm:w-14 sm:h-14 bg-slate-50 dark:bg-[#111827] rounded-full flex items-center justify-center border-2 overflow-hidden shadow-inner ${u.isActiveToday ? 'border-green-400 dark:border-green-500' : 'border-slate-200 dark:border-slate-700'}`}>
                     {u.petName ? (
-                      <img src={`/pets/${u.petName}.png`} alt="pet" className={`w-10 h-10 object-contain drop-shadow-md ${!u.isActiveToday ? 'grayscale opacity-60' : ''}`} />
+                      <img src={`/pets/${u.petName}.png`} alt="pet" className={`w-8 h-8 sm:w-10 sm:h-10 object-contain drop-shadow-md ${!u.isActiveToday ? 'grayscale opacity-60' : ''}`} />
                     ) : (
-                      <span className="text-2xl">👤</span>
+                      <span className="text-xl sm:text-2xl opacity-50">👤</span>
                     )}
                   </div>
                 </div>
 
                 <div className="flex-grow min-w-0">
-                  {/* --- BAGIAN INI YANG DIUBAH JADI LINK --- */}
-                  <h2 className="text-lg font-bold truncate flex items-center gap-2">
-                    <Link href={`/profile/${u.username}`} className="hover:text-primary transition">
+                  <h2 className="text-base sm:text-lg font-black truncate flex items-center gap-2 text-slate-800 dark:text-white">
+                    <Link href={`/profile/${u.username}`} className="hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors">
                         {u.username || "User"} 
                     </Link>
-                    {isMe && <span className="text-xs font-normal text-primary ml-1 bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">Kamu</span>}
+                    {isMe && <span className="text-[10px] sm:text-xs font-bold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-lg uppercase tracking-wider">Kamu</span>}
                   </h2>
-                  <div className="flex items-center gap-3 text-sm mt-1">
-                    <span className="font-semibold text-white bg-gray-800 px-2 py-0.5 rounded-md">Lv. {u.level}</span>
-                    <span className="font-bold text-orange-400 flex items-center gap-1">
+                  <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm mt-1.5">
+                    <span className="font-bold text-slate-500 dark:text-indigo-200/80 bg-slate-100 dark:bg-slate-800/50 px-2.5 py-1 rounded-lg">Lv. {u.level}</span>
+                    <span className="font-black text-orange-500 dark:text-orange-400 flex items-center gap-1">
                       🔥 {u.current_streak || 0} Hari
                     </span>
                   </div>
                 </div>
 
-                <div className="shrink-0 flex items-center gap-4 text-right">
+                <div className="shrink-0 flex items-center gap-2 sm:gap-4 text-right">
                    <div className="hidden sm:block">
                      {u.isActiveToday ? (
-                       <div className="text-green-400 text-sm font-medium bg-green-400/10 px-3 py-1 rounded-lg border border-green-400/20">Selesai Hari Ini</div>
+                       <div className="text-green-600 dark:text-green-400 text-xs font-bold bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded-xl border border-green-200 dark:border-green-500/30">Selesai Hari Ini</div>
                      ) : (
-                       <div className="text-gray-500 text-xs italic">{u.offlineText}</div>
+                       <div className="text-slate-400 dark:text-slate-500 text-xs font-medium italic bg-slate-50 dark:bg-slate-800/50 px-3 py-1.5 rounded-xl">{u.offlineText}</div>
                      )}
                    </div>
 
@@ -365,7 +374,7 @@ export default function Leaderboard() {
                      <button 
                        onClick={() => confirmRemoveFriend(u.id, u.username)}
                        title="Hapus Teman"
-                       className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/30 border border-red-500/20 text-red-400 flex items-center justify-center transition opacity-0 group-hover:opacity-100"
+                       className="w-8 h-8 rounded-full bg-slate-100 hover:bg-red-100 dark:bg-slate-800 dark:hover:bg-red-500/20 border border-transparent dark:hover:border-red-500/30 text-slate-400 hover:text-red-500 flex items-center justify-center transition-all opacity-100 sm:opacity-0 group-hover:opacity-100"
                      >
                        ✕
                      </button>
@@ -379,21 +388,22 @@ export default function Leaderboard() {
 
       </div>
 
+      {/* NOTIFICATION MODAL */}
       {notification.show && (
-        <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#111827] border border-gray-700 rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl text-center transform scale-100 transition-transform">
+        <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-indigo-500/30 rounded-[2rem] p-8 max-w-sm w-full shadow-2xl text-center transform scale-100 transition-transform">
             
             <div className="mb-4">
-               {notification.type === 'success' && <span className="text-5xl">✅</span>}
-               {notification.type === 'error' && <span className="text-5xl">⚠️</span>}
-               {notification.type === 'confirm' && <span className="text-5xl">🤔</span>}
+               {notification.type === 'success' && <span className="text-6xl drop-shadow-md">✅</span>}
+               {notification.type === 'error' && <span className="text-6xl drop-shadow-md">⚠️</span>}
+               {notification.type === 'confirm' && <span className="text-6xl drop-shadow-md">🤔</span>}
             </div>
 
-            <h3 className="text-xl font-bold text-white mb-2">
+            <h3 className="text-2xl font-black text-slate-800 dark:text-white mb-2">
               {notification.type === 'success' ? 'Berhasil!' : notification.type === 'error' ? 'Oops!' : 'Konfirmasi'}
             </h3>
             
-            <p className="text-gray-300 mb-8">{notification.message}</p>
+            <p className="text-slate-500 dark:text-indigo-200/80 mb-8 font-medium leading-relaxed">{notification.message}</p>
             
             <div className={`flex gap-3 ${notification.type === 'confirm' ? 'justify-between' : 'justify-center'}`}>
               
@@ -401,13 +411,13 @@ export default function Leaderboard() {
                 <>
                   <button 
                     onClick={() => setNotification({ ...notification, show: false })}
-                    className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-medium py-2.5 rounded-xl transition"
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-white font-bold py-3 rounded-xl transition"
                   >
                     Batal
                   </button>
                   <button 
                     onClick={notification.onConfirm}
-                    className="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-2.5 rounded-xl transition"
+                    className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl shadow-md transition"
                   >
                     Hapus
                   </button>
@@ -415,7 +425,7 @@ export default function Leaderboard() {
               ) : (
                 <button 
                   onClick={() => setNotification({ ...notification, show: false })}
-                  className="w-full bg-primary hover:bg-purple-500 text-white font-medium py-2.5 rounded-xl transition"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-md transition"
                 >
                   Tutup
                 </button>

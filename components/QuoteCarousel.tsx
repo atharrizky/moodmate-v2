@@ -28,22 +28,22 @@ const quotesData = [
   { mood: "anticipation", en: "Anticipation is sometimes more exciting than actual events.", id: "Antisipasi terkadang lebih mengasyikkan daripada kejadian itu sendiri.", author: "Anonymous" }
 ]
 
+// Diperbarui: Warna untuk Light Mode & Dark Mode agar selalu terbaca
 const moodThemes: Record<string, { colorClass: string, icon: string, label: string }> = {
-  joy: { colorClass: "text-yellow-400 bg-yellow-400/10 border-yellow-400/20", icon: "🌟", label: "Joy" },
-  trust: { colorClass: "text-green-400 bg-green-400/10 border-green-400/20", icon: "🤝", label: "Trust" },
-  fear: { colorClass: "text-orange-400 bg-orange-400/10 border-orange-400/20", icon: "😨", label: "Fear" },
-  surprise: { colorClass: "text-pink-400 bg-pink-400/10 border-pink-400/20", icon: "😲", label: "Surprise" },
-  sad: { colorClass: "text-blue-400 bg-blue-400/10 border-blue-400/20", icon: "😢", label: "Sadness" },
-  disgust: { colorClass: "text-purple-400 bg-purple-400/10 border-purple-400/20", icon: "🤢", label: "Disgust" },
-  anger: { colorClass: "text-red-400 bg-red-400/10 border-red-400/20", icon: "😡", label: "Anger" },
-  anticipation: { colorClass: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20", icon: "🤔", label: "Anticipation" }
+  joy: { colorClass: "text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-400/10 border-yellow-200 dark:border-yellow-400/20", icon: "🌟", label: "Joy" },
+  trust: { colorClass: "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-400/10 border-green-200 dark:border-green-400/20", icon: "🤝", label: "Trust" },
+  fear: { colorClass: "text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-400/10 border-orange-200 dark:border-orange-400/20", icon: "😨", label: "Fear" },
+  surprise: { colorClass: "text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-400/10 border-pink-200 dark:border-pink-400/20", icon: "😲", label: "Surprise" },
+  sad: { colorClass: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-400/10 border-blue-200 dark:border-blue-400/20", icon: "😢", label: "Sadness" },
+  disgust: { colorClass: "text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-400/10 border-purple-200 dark:border-purple-400/20", icon: "🤢", label: "Disgust" },
+  anger: { colorClass: "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-400/10 border-red-200 dark:border-red-400/20", icon: "😡", label: "Anger" },
+  anticipation: { colorClass: "text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-400/10 border-cyan-200 dark:border-cyan-400/20", icon: "🤔", label: "Anticipation" }
 }
 
 export default function QuoteCarousel() {
   const [quoteIndex, setQuoteIndex] = useState(0)
   const [isFading, setIsFading] = useState(false)
 
-  // Fungsi untuk memutar kutipan secara acak (memastikan tidak muncul kutipan yang sama dua kali berturut-turut)
   const randomizeQuote = useCallback(() => {
     setIsFading(true)
     setTimeout(() => {
@@ -55,19 +55,14 @@ export default function QuoteCarousel() {
         return newIndex
       })
       setIsFading(false)
-    }, 300) // Waktu transisi saat teks meredup
+    }, 300) 
   }, [])
 
-  // Auto-play: Berganti sendiri setiap 8 detik
   useEffect(() => {
-    // Memilih quote acak saat pertama kali komponen dimuat
     setQuoteIndex(Math.floor(Math.random() * quotesData.length))
-
     const interval = setInterval(() => {
       randomizeQuote()
     }, 8000)
-
-    // Membersihkan interval saat komponen dibongkar (agar tidak bocor memorinya)
     return () => clearInterval(interval)
   }, [randomizeQuote])
 
@@ -77,12 +72,12 @@ export default function QuoteCarousel() {
   const theme = moodThemes[currentQuote.mood]
 
   return (
-    <div className="relative bg-[#111827] border border-gray-800 p-8 sm:p-10 rounded-2xl shadow-sm text-center flex flex-col items-center justify-center min-h-[260px] overflow-hidden group">
+    <div className="relative bg-white dark:bg-[#13192B] border border-slate-200 dark:border-indigo-500/20 p-8 sm:p-10 rounded-3xl shadow-sm dark:shadow-[0_0_20px_rgba(99,102,241,0.05)] text-center flex flex-col items-center justify-center min-h-[260px] overflow-hidden group transition-colors duration-300">
       
-      {/* Tombol Refresh/Randomize Tunggal di Pojok Kanan Atas */}
+      {/* Tombol Refresh */}
       <button 
         onClick={randomizeQuote}
-        className="absolute top-4 right-4 p-2 text-gray-500 hover:text-white bg-gray-800/40 hover:bg-gray-700 rounded-full transition opacity-0 group-hover:opacity-100 focus:outline-none"
+        className="absolute top-5 right-5 p-2 text-slate-400 hover:text-purple-600 dark:text-slate-500 dark:hover:text-white bg-slate-100 hover:bg-purple-100 dark:bg-slate-800/40 dark:hover:bg-slate-700 rounded-full transition-all opacity-0 group-hover:opacity-100 focus:outline-none"
         aria-label="Acak Kutipan"
         title="Ganti Kutipan"
       >
@@ -95,20 +90,20 @@ export default function QuoteCarousel() {
       <div className={`transition-opacity duration-300 max-w-2xl px-4 sm:px-8 ${isFading ? 'opacity-0' : 'opacity-100'}`}>
         
         {/* Badge Emosi */}
-        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold mb-6 ${theme.colorClass}`}>
-          <span>{theme.icon}</span>
+        <div className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border text-xs font-extrabold mb-6 ${theme.colorClass}`}>
+          <span className="text-sm">{theme.icon}</span>
           <span className="uppercase tracking-wider">{theme.label}</span>
         </div>
 
-        <p className="text-lg md:text-xl font-medium text-white mb-3 leading-relaxed">
+        <p className="text-lg md:text-xl font-bold text-slate-800 dark:text-white mb-3 leading-relaxed">
           "{currentQuote.en}"
         </p>
-        <p className="text-sm md:text-base text-gray-400 italic mb-6">
+        <p className="text-sm md:text-base font-medium text-slate-500 dark:text-gray-400 italic mb-6">
           "{currentQuote.id}"
         </p>
         
-        <div className="inline-block bg-[#0f172a] px-4 py-1.5 rounded-full border border-gray-800">
-          <span className="text-xs font-bold text-primary tracking-wide">— {currentQuote.author}</span>
+        <div className="inline-block bg-indigo-50 dark:bg-indigo-950/30 px-5 py-2 rounded-full border border-indigo-100 dark:border-indigo-800/50">
+          <span className="text-xs font-black text-indigo-600 dark:text-indigo-400 tracking-wider uppercase">— {currentQuote.author}</span>
         </div>
 
       </div>

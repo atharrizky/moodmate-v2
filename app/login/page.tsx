@@ -11,6 +11,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  // STATE PENGGANTI ALERT JS BAWAAN
+  const [customAlert, setCustomAlert] = useState<{title: string, desc: string, type: 'success' | 'error' | 'info'} | null>(null);
+
   // Form Data
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,7 +31,15 @@ export default function LoginPage() {
           email,
           password,
         });
-        if (error) throw error;
+        
+        if (error) {
+           setCustomAlert({
+             title: "Gagal Masuk 🔒",
+             desc: "Email atau password yang kamu masukkan salah. Coba periksa lagi ya!",
+             type: "error"
+           });
+           throw error;
+        }
         
         // Kalau sukses, lempar ke Dashboard
         router.push('/dashboard');
@@ -44,13 +55,28 @@ export default function LoginPage() {
             },
           },
         });
-        if (error) throw error;
         
-        alert('Registrasi berhasil! Silakan login sekarang.');
+        if (error) {
+           setCustomAlert({
+             title: "Registrasi Gagal ⚠️",
+             desc: "Gagal mendaftar: " + error.message,
+             type: "error"
+           });
+           throw error;
+        }
+        
+        // REVISI: Ganti Alert JS jadi Custom Alert
+        setCustomAlert({
+          title: "Registrasi Berhasil! 🎉",
+          desc: "Akun barumu sudah siap. Silakan login menggunakan email dan password yang baru saja kamu buat.",
+          type: "success"
+        });
+        
         setIsLogin(true); // Pindah ke mode login setelah sukses daftar
       }
     } catch (error: any) {
-      setErrorMsg(error.message || 'Terjadi kesalahan');
+      // Menghindari pesan error bertumpuk dengan Custom Alert
+      console.log("Auth Error:", error.message);
     } finally {
       setLoading(false);
     }
@@ -58,7 +84,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="bg-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-700">
+      <div className="bg-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-700 relative z-10">
         
         {/* Tombol Kembali ke Home */}
         <Link href="/" className="text-slate-400 hover:text-white text-sm mb-6 inline-block">
@@ -72,6 +98,7 @@ export default function LoginPage() {
           {isLogin ? 'Masuk untuk melanjutkan jurnalmu.' : 'Mulai perjalanan jurnalmu hari ini.'}
         </p>
 
+        {/* PESAN ERROR BAWAAN (Opsional jika ingin dipertahankan) */}
         {errorMsg && (
           <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded-lg mb-6 text-sm text-center">
             {errorMsg}
@@ -142,6 +169,57 @@ export default function LoginPage() {
         </div>
 
       </div>
+
+      {/* ========================================== */}
+      {/* CUSTOM POP-UP ALERT (PENGGANTI ALERT JS)   */}
+      {/* ========================================== */}
+      {customAlert && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-slate-800 border border-slate-700 w-full max-w-sm rounded-[2rem] p-8 shadow-2xl transform transition-all animate-bounce-in text-center relative overflow-hidden">
+            
+            {/* Garis Warna di Atas */}
+            <div className={`absolute top-0 left-0 w-full h-2 ${
+              customAlert.type === 'success' ? 'bg-green-500' : 
+              customAlert.type === 'error' ? 'bg-red-500' : 'bg-indigo-500'
+            }`}></div>
+
+            <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-5 shadow-inner ${
+              customAlert.type === 'success' ? 'bg-green-500/20 text-green-400' : 
+              customAlert.type === 'error' ? 'bg-red-500/20 text-red-400' : 'bg-indigo-500/20 text-indigo-400'
+            }`}>
+              <span className="text-4xl animate-bounce">
+                {customAlert.type === 'success' ? '✨' : customAlert.type === 'error' ? '⚠️' : '💡'}
+              </span>
+            </div>
+
+            <h3 className="text-2xl font-black text-white mb-3">{customAlert.title}</h3>
+            <p className="text-slate-300 font-medium mb-8 leading-relaxed whitespace-pre-wrap">
+              {customAlert.desc}
+            </p>
+
+            <button 
+              onClick={() => setCustomAlert(null)} 
+              className={`w-full py-4 rounded-xl font-black text-slate-900 shadow-lg transition-transform hover:-translate-y-1 ${
+                customAlert.type === 'success' ? 'bg-green-500 hover:bg-green-400 shadow-green-500/30' : 
+                customAlert.type === 'error' ? 'bg-red-500 hover:bg-red-400 shadow-red-500/30 text-white' : 'bg-indigo-500 hover:bg-indigo-400 shadow-indigo-500/30 text-white'
+              }`}
+            >
+              Oke, Mengerti!
+            </button>
+          </div>
+        </div>
+      )}
+
+      <style jsx global>{`
+        @keyframes bounceIn {
+          0% { transform: scale(0.9); opacity: 0; }
+          50% { transform: scale(1.02); opacity: 1; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-bounce-in { animation: bounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      `}</style>
     </div>
   );
 }

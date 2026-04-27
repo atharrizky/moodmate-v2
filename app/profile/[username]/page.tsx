@@ -1,249 +1,358 @@
 "use client"
 
-import Navbar from "@/components/Navbar"
 import { useEffect, useState } from "react"
-import { supabase } from "@/lib/supabase"
 import { useParams, useRouter } from "next/navigation"
-import Link from "next/link"
+import Navbar from "@/components/Navbar"
+import { supabase } from "@/lib/supabase"
 
-// --- DAFTAR MEDALI RESILIEN (KEBAL) DI DALAM KODINGAN ---
-// Kita hardcode detail medalinya agar tidak perlu narik tabel `badges` lagi.
-// `req_id` di sini harus cocok dengan ID yang diberikan oleh Jurnal/Toko Pet ke user_badges.
-const RESILIENT_BADGES = [
-  { req_id: 1, name: "Langkah Pertama", desc: "Mengisi jurnal untuk pertama kalinya.", img: "badge_1.jpg" },
-  { req_id: 2, name: "Si Paling Bebas", desc: "Membuat 5 Jurnal Bebas.", img: "badge_2.jpg" },
-  { req_id: 3, name: "Si Paling Joy", desc: "Memilih emosi 'Joy' sebanyak 5 kali.", img: "badge_3.jpg" },
-  { req_id: 4, name: "Pawang Emosi", desc: "Pernah mengisi jurnal dengan ke-8 jenis emosi minimal 1 kali.", img: "badge_4.jpg" },
-  { req_id: 5, name: "Si Paling Konsisten", desc: "Berhasil mempertahankan Streak selama 7 hari berturut-turut.", img: "badge_5.jpg" },
-  { req_id: 6, name: "Kolektor Satwa", desc: "Berhasil membeli 3 pet berbeda di Toko.", img: "badge_6.jpg" },
-  { req_id: 7, name: "Pemancing Ulung", desc: "Berhasil membeli pet eksklusif 'Pufferfish'.", img: "badge_7.jpg" },
-  { req_id: 8, name: "Sultan Musang King", desc: "Berhasil mengumpulkan 1.000 Koin.", img: "badge_8.jpg" }
+// KATALOG MEDALI (URUT 1-8, DESKRIPSI SESUAI PERMINTAAN, GAMBAR 6 & 7 SUDAH DITUKAR AGAR PAS)
+const BADGE_CATALOG = [
+  { id: 1, name: "Langkah Pertama", desc: "🐣 Mengisi jurnal untuk pertama kalinya.", img: "badge_1.jpg", hint: "Cukup simpan 1 jurnal emosi atau bebas untuk memulai perjalananmu." },
+  { id: 2, name: "Si Paling Bebas", desc: "💭 Membuat 5 Jurnal Bebas.", img: "badge_2.jpg", hint: "Tuliskan pikiranmu tanpa batasan di menu Jurnal Bebas sebanyak 5 kali." },
+  { id: 3, name: "Si Paling Joy", desc: "✨ Memilih emosi 'Joy' sebanyak 5 kali.", img: "badge_3.jpg", hint: "Rayakan kebahagiaanmu! Simpan jurnal dengan emosi Joy sebanyak 5 kali." },
+  { id: 4, name: "Pawang Emosi", desc: "🎭 Mengisi jurnal dengan ke-8 jenis emosi Plutchik (Joy, Sad, Fear, dll) minimal 1 kali.", img: "badge_4.jpg", hint: "Pernah merasakan segalanya? Isi jurnal dengan masing-masing dari 8 emosi dasar minimal 1 kali." },
+  { id: 5, name: "Si Paling Konsisten", desc: "🔥 Berhasil mempertahankan Streak selama 7 hari berturut-turut tanpa bolong.", img: "badge_5.jpg", hint: "Disiplin adalah kunci. Login dan isi jurnal selama 7 hari berturut-turut tanpa bolong." },
+  { id: 6, name: "Kolektor Satwa", desc: "🐾 Berhasil membeli 3 pet berbeda di Toko.", img: "badge_6.jpg", hint: "Buka menu Toko Pet dan berhasil membeli minimal 3 jenis peliharaan yang berbeda." }, // Gambar jejak kaki (badge_7.jpg)
+  { id: 7, name: "Pemancing Ulung", desc: "🎣 Berhasil membeli pet eksklusif 'Pufferfish' di Toko.", img: "badge_7.jpg", hint: "Kumpulkan koin yang cukup dan beli pet ikan buntal (Pufferfish) di Toko Pet." }, // Gambar Pufferfish (badge_6.jpg)
+  { id: 8, name: "Sultan Musang King", desc: "👑 Berhasil mengumpulkan 1.000 Koin (Kaya raya di dalam aplikasi).", img: "badge_8.jpg", hint: "Kumpulkan koin dari aktivitas harian hingga total koinmu mencapai angka 1.000." }
 ]
 
-export default function PublicProfile() {
+export default function ProfilePage() {
   const params = useParams()
   const router = useRouter()
-  const usernameQuery = params.username as string
+  const username = params.username as string
 
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [profileData, setProfileData] = useState<any>(null)
-  const [ownedBadgeIds, setOwnedBadgeIds] = useState<number[]>([]) // Hanya simpan ID medalinya saja
-  const [equippedBadge, setEquippedBadge] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const [ownedBadges, setOwnedBadges] = useState<number[]>([])
+  const [equippedBadges, setEquippedBadges] = useState<number[]>([]) // Array max 4
+  const [petImage, setPetImage] = useState<string | null>(null)
+  const [isMyProfile, setIsMyProfile] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // STATE UNTUK MODAL POP-UP DETAIL BADGE
+  const [selectedBadge, setSelectedBadge] = useState<any | null>(null)
+
+  // STATE PENGGANTI ALERT JS BAWAAN
+  const [customAlert, setCustomAlert] = useState<{title: string, desc: string, type: 'success' | 'error' | 'info'} | null>(null);
 
   useEffect(() => {
-    fetchUserProfile()
-  }, [usernameQuery])
+    fetchProfile()
+  }, [username])
 
-  async function fetchUserProfile() {
-    setLoading(true)
-    try {
-      // 1. Dapatkan UserID yang sedang login
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) setCurrentUserId(session.user.id)
+  async function fetchProfile() {
+    setIsLoading(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    // 1. Ambil data profil berdasarkan username
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('username', username)
+      .single()
 
-      // 2. Cari data user berdasarkan username di URL
-      const { data: userProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, username, level, xp, current_streak, coins, equipped_pet_id, equipped_badge_id')
-        .ilike('username', usernameQuery)
-        .single()
+    if (!profile) {
+      setCustomAlert({
+        title: "Pencarian Gagal 🔍",
+        desc: "Profil pengguna tidak ditemukan. Membawamu kembali ke Dashboard...",
+        type: "error"
+      });
+      setTimeout(() => { router.push("/dashboard") }, 3000);
+      return
+    }
 
-      if (profileError || !userProfile) {
-        setLoading(false)
+    setProfileData(profile)
+    setEquippedBadges(profile.equipped_badges || [])
+    if (session && session.user.id === profile.id) {
+      setIsMyProfile(true)
+    }
+
+    // 2. Ambil gambar pet yang dipakai
+    if (profile.equipped_pet_id) {
+      const { data: pet } = await supabase.from('pets').select('name').eq('id', profile.equipped_pet_id).single()
+      if (pet) setPetImage(pet.name.toLowerCase())
+    }
+
+    // 3. Ambil daftar medali yang sudah didapat user ini
+    const { data: badges } = await supabase.from('user_badges').select('badge_id').eq('user_id', profile.id)
+    if (badges) {
+      setOwnedBadges(badges.map(b => b.badge_id))
+    }
+
+    setIsLoading(false)
+  }
+
+  // FUNGSI PASANG / COPOT MEDALI (MAX 4) - SUDAH DIPERBAIKI
+  async function toggleBadge(badgeId: number) {
+    if (!isMyProfile) return;
+
+    let newEquipped = [...equippedBadges]
+
+    if (newEquipped.includes(badgeId)) {
+      // Jika sudah dipasang, COPOT
+      newEquipped = newEquipped.filter(id => id !== badgeId)
+    } else {
+      // Jika belum dipasang, TAMBAH (cek limit max 4)
+      if (newEquipped.length >= 4) {
+        setCustomAlert({
+          title: "Batas Maksimal! ⚠️",
+          desc: "Maksimal hanya bisa memajang 4 medali di Profil, Lur! Copot yang lain dulu ya kalau mau pasang ini.",
+          type: "info"
+        });
         return
       }
+      newEquipped.push(badgeId)
+    }
 
-      // 3. Ambil nama pet yang dipakai
-      let petName = null
-      if (userProfile.equipped_pet_id) {
-        const { data: pet } = await supabase.from('pets').select('name').eq('id', userProfile.equipped_pet_id).single()
-        if (pet) petName = pet.name.toLowerCase()
-      }
+    // Update state biar UI langsung berubah
+    setEquippedBadges(newEquipped)
 
-      setProfileData({ ...userProfile, petName })
+    // Update ke database Supabase
+    const { error } = await supabase
+      .from('profiles')
+      .update({ equipped_badges: newEquipped })
+      .eq('id', profileData.id)
 
-      // 4. Ambil HANYA DAFTAR ID MEDALI yang dimiliki user ini dari tabel user_badges
-      const { data: userBadgesData } = await supabase
-        .from('user_badges')
-        .select('badge_id')
-        .eq('user_id', userProfile.id)
-
-      if (userBadgesData && userBadgesData.length > 0) {
-        const myBadgeIds = userBadgesData.map(b => b.badge_id)
-        setOwnedBadgeIds(myBadgeIds)
-
-        // Cari mana yang sedang dipakai (equipped) dari daftar medal kebal kita
-        const activeBadgeDef = RESILIENT_BADGES.find(b => b.req_id === userProfile.equipped_badge_id)
-        if (activeBadgeDef) setEquippedBadge(activeBadgeDef)
-      }
-    } catch (err) {
-      console.error("Error loading profile:", err)
-    } finally {
-      setLoading(false)
+    if (error) {
+      console.error("Gagal update medali:", error)
+      setCustomAlert({
+        title: "Koneksi Gagal 🔌",
+        desc: "Waduh, gagal menyimpan pengaturan medali ke database. Coba lagi nanti ya.",
+        type: "error"
+      });
     }
   }
 
-  // --- FUNGSI PASANG BADGE (EQUIP) ---
-  async function handleEquipBadge(badgeDef: any) {
-    if (!profileData || profileData.id !== currentUserId) return 
+if (isLoading) return (
+    <div className="min-h-screen bg-transparent flex flex-col items-center justify-center text-slate-800 dark:text-white transition-colors duration-300">
+      <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  )
 
-    try {
-      // Update di Supabase tabel profiles kolom equipped_badge_id
-      const { error } = await supabase
-        .from('profiles')
-        .update({ equipped_badge_id: badgeDef.req_id })
-        .eq('id', currentUserId)
-      
-      if (error) throw error
-
-      // Update UI lokal agar responsif
-      setEquippedBadge(badgeDef)
-      setProfileData({...profileData, equipped_badge_id: badgeDef.req_id})
-      alert(`${badgeDef.name} berhasil dipajang di profilmu! ✨`)
-
-    } catch (err: any) {
-      alert("Gagal memasang badge: " + err.message)
-    }
-  }
-
-  if (loading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Memuat Profil...</div>
-
-  if (!profileData) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white p-5 text-center">
-        <h1 className="text-4xl mb-4">🕵️‍♂️</h1>
-        <h2 className="text-2xl font-bold mb-2">User Tidak Ditemukan</h2>
-        <p className="text-gray-400 mb-6">Mungkin dia ganti nama atau akunnya belum dibuat.</p>
-        <button onClick={() => router.push('/leaderboard')} className="bg-primary hover:bg-purple-500 px-6 py-3 rounded-xl font-bold transition">
-          Kembali ke Komunitas
-        </button>
-      </div>
-    )
-  }
-
-  const isMyProfile = profileData.id === currentUserId // Cek kalau ini profil sendiri
-
-  return (
-    <div className="min-h-screen bg-background text-white pb-20">
+return (
+    <div className="min-h-screen bg-transparent text-slate-800 dark:text-white pb-24 relative overflow-hidden transition-colors duration-300">
       <Navbar />
 
-      {/* HEADER PROFIL */}
-      <div className="w-full bg-[#0f172a] border-b border-gray-800 pt-[120px] pb-10 px-5 relative overflow-hidden">
-         {/* Background Ornamen */}
-        <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-primary/20 rounded-full blur-3xl -z-10"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-blue-500/20 rounded-full blur-3xl -z-10"></div>
+      {/* BACKGROUND GLOW */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-300/40 dark:bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none z-0"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-purple-300/30 dark:bg-purple-600/10 rounded-full blur-[100px] pointer-events-none z-0"></div>
 
-        <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center md:items-start gap-8 z-10 relative">
-          
-          {/* Avatar / Pet */}
-          <div className="relative shrink-0">
-            <div className="w-32 h-32 md:w-40 md:h-40 bg-[#111827] rounded-3xl border-4 border-gray-700 flex items-center justify-center overflow-hidden shadow-2xl hover:border-primary transition">
-              {profileData.petName ? (
-                <img src={`/pets/${profileData.petName}.png`} alt="Avatar" className="w-24 h-24 md:w-32 md:h-32 object-contain drop-shadow-xl hover:scale-110 transition-transform" onError={(e) => { e.currentTarget.src = "https://cdn-icons-png.flaticon.com/512/5736/5736043.png" }} />
+      <main className="max-w-5xl mx-auto pt-[120px] px-5 relative z-10">
+        
+        {/* HEADER PROFIL */}
+        <div className="flex flex-col items-center justify-center text-center mb-16 animate-fade-in-down">
+          {/* Avatar Pet */}
+          <div className="relative mb-6 group">
+            <div className="w-32 h-32 sm:w-40 sm:h-40 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-[2.5rem] flex items-center justify-center border-2 border-indigo-200 dark:border-indigo-500/30 shadow-[0_0_30px_rgba(99,102,241,0.15)] group-hover:border-indigo-400 transition-colors">
+              {petImage ? (
+                <img src={`/pets/${petImage}.png`} alt="pet" className="w-24 h-24 sm:w-28 sm:h-28 object-contain drop-shadow-xl" />
               ) : (
-                <span className="text-6xl">👤</span>
+                <span className="text-4xl">🥚</span>
               )}
             </div>
-            <div className="absolute -bottom-4 -right-4 bg-gray-800 border-2 border-gray-700 w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shadow-lg">
+            {/* Level Badge ditaruh di pojok */}
+            <div className="absolute -bottom-3 -right-3 w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center font-black text-xl border-4 border-slate-50 dark:border-[#0B0F19] shadow-lg">
               {profileData.level}
             </div>
           </div>
 
-          {/* Info Utama */}
-          <div className="flex-grow text-center md:text-left">
-            <h1 className="text-4xl font-black mb-2 flex items-center justify-center md:justify-start gap-3">
+          {/* Nama & Deretan Medali Aktif */}
+          <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 mb-3">
+            <h1 className="text-3xl sm:text-5xl font-black tracking-tight drop-shadow-md capitalize text-slate-900 dark:text-white">
               {profileData.username}
-              {/* Badge Pilihan Utama dipajang di sebelah nama (Showcase) */}
-              {equippedBadge && (
-                <span title={equippedBadge.name} className="inline-block relative">
-                   {/* Efek glow di belakang badge emas */}
-                   <div className="absolute inset-0 bg-yellow-500/40 rounded-full blur-lg animate-pulse"></div>
-                  <img src={`/badges/${equippedBadge.img}`} alt={equippedBadge.name} className="w-10 h-10 drop-shadow-[0_0_15px_rgba(255,215,0,0.8)] relative z-10 hover:scale-110 transition-transform" onError={(e) => { e.currentTarget.style.display = 'none' }} />
-                </span>
-              )}
             </h1>
             
-            <p className="text-gray-400 mb-6 leading-relaxed">Pencari Ketenangan Level {profileData.level} di MoodMate.</p>
-
-            <div className="flex flex-wrap justify-center md:justify-start gap-4">
-              <div className="bg-[#111827] border border-gray-800 px-5 py-3 rounded-xl flex items-center gap-3 shadow-inner hover:-translate-y-1 transition hover:border-primary cursor-default">
-                <span className="text-2xl">🔥</span>
-                <div className="text-left">
-                  <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Streak</p>
-                  <p className="font-bold text-orange-400">{profileData.current_streak || 0} Hari</p>
-                </div>
+            {/* RENDER MAX 4 MEDALI DI SAMPING NAMA */}
+            {equippedBadges.length > 0 && (
+              <div className="flex bg-white/50 dark:bg-slate-800/50 p-1.5 rounded-full border border-slate-200 dark:border-slate-700/50 gap-1 shadow-inner">
+                {equippedBadges.map((badgeId) => {
+                  const badgeInfo = BADGE_CATALOG.find(b => b.id === badgeId)
+                  if (!badgeInfo) return null
+                  return (
+                    <img 
+                      key={badgeId} 
+                      src={badgeInfo.img.startsWith('/') ? badgeInfo.img : `/badges/${badgeInfo.img}`} 
+                      alt={badgeInfo.name} 
+                      title={badgeInfo.name}
+                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border border-slate-300 dark:border-slate-600 drop-shadow-md cursor-pointer hover:scale-110 transition-transform"
+                      onClick={() => setSelectedBadge(badgeInfo)}
+                    />
+                  )
+                })}
               </div>
-              
-              <div className="bg-[#111827] border border-gray-800 px-5 py-3 rounded-xl flex items-center gap-3 shadow-inner hover:-translate-y-1 transition hover:border-primary cursor-default">
-                <span className="text-2xl">🪙</span>
-                <div className="text-left">
-                  <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Koin</p>
-                  <p className="font-bold text-yellow-400">{profileData.coins || 0}</p>
-                </div>
+            )}
+          </div>
+
+          <p className="text-slate-500 dark:text-indigo-200/70 font-medium text-sm sm:text-base mb-6">
+            Pencari Ketenangan Level {profileData.level} di MoodMate.
+          </p>
+
+          {/* Stat Mini (Streak & Koin) */}
+          <div className="flex gap-4 sm:gap-6 justify-center">
+            <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50 px-6 py-3 rounded-2xl flex items-center gap-3 shadow-sm">
+              <span className="text-2xl drop-shadow-sm">🔥</span>
+              <div className="text-left">
+                <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Streak</p>
+                <p className="font-black text-slate-800 dark:text-white">{profileData.current_streak} Hari</p>
+              </div>
+            </div>
+            <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50 px-6 py-3 rounded-2xl flex items-center gap-3 shadow-sm">
+              <span className="text-2xl drop-shadow-sm">🪙</span>
+              <div className="text-left">
+                <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Koin</p>
+                <p className="font-black text-slate-800 dark:text-white">{profileData.coins}</p>
               </div>
             </div>
           </div>
-          
         </div>
-      </div>
 
-      {/* ETALASE MEDALI */}
-      <div className="max-w-4xl mx-auto px-5 mt-10 relative">
-        <h2 className="text-2xl font-bold mb-6 border-b border-gray-800 pb-4 flex items-center justify-between">
-            Koleksi Pencapaian
-            <span className="text-sm font-normal text-gray-500 bg-gray-800/50 px-3 py-1 rounded-full border border-gray-700">{ownedBadgeIds.length} / {RESILIENT_BADGES.length} Didapat</span>
-        </h2>
-        
-        {ownedBadgeIds.length === 0 ? (
-          <div className="bg-[#111827] border border-gray-800 p-8 rounded-2xl text-center text-gray-400">
-            Belum ada medali yang dikumpulkan. Perjalanan baru saja dimulai!
+        {/* ETALASE KOLEKSI PENCAPAIAN */}
+        <div className="mb-12 animate-fade-in-up">
+          <div className="flex justify-between items-end mb-8 border-b border-slate-200 dark:border-slate-800 pb-4">
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Koleksi Pencapaian</h2>
+            <div className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 font-bold px-4 py-1.5 rounded-full text-sm border border-indigo-200 dark:border-indigo-500/20">
+              {ownedBadges.length} / {BADGE_CATALOG.length} Didapat
+            </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {/* Kita mengulang (looping) dari DAFTAR MEDALI KEBAL kita */}
-            {RESILIENT_BADGES.map((badgeDef) => {
-              const isOwned = ownedBadgeIds.includes(badgeDef.req_id)
-              
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+            {BADGE_CATALOG.map((badge) => {
+              const isOwned = ownedBadges.includes(badge.id)
+              const isEquipped = equippedBadges.includes(badge.id)
+              const imgSrc = badge.img.startsWith('/') ? badge.img : `/badges/${badge.img}`
+
               return (
-                <div key={badgeDef.req_id} className={`bg-[#111827] border ${isOwned ? 'border-primary' : 'border-gray-800'} p-5 rounded-2xl flex flex-col items-center text-center transition-all shadow-sm ${!isOwned ? 'opacity-40 grayscale' : ''}`}>
+                <div 
+                  key={badge.id} 
+                  className={`bg-white/80 dark:bg-[#13192B]/80 backdrop-blur-sm p-6 rounded-[2rem] border transition-all duration-300 flex flex-col items-center text-center relative overflow-hidden group
+                    ${isOwned ? 'border-indigo-200 dark:border-indigo-500/30 hover:border-indigo-400 dark:hover:border-indigo-400 hover:shadow-[0_10px_30px_rgba(99,102,241,0.15)]' : 'border-slate-200 dark:border-slate-800 opacity-60 grayscale hover:grayscale-0 hover:opacity-100'}
+                  `}
+                >
+                  {/* Efek Glow di belakang medali jika dipakai */}
+                  {isEquipped && <div className="absolute top-10 w-20 h-20 bg-indigo-200/50 dark:bg-indigo-500/40 rounded-full blur-xl"></div>}
                   
-                  {/* Gambar Badge */}
-                  <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-4 transition border ${isOwned ? 'bg-primary/10 border-primary shadow-[0_0_15px_rgba(168,85,247,0.3)]' : 'bg-gray-900 border-gray-700'}`}>
-                    <img 
-                      src={`/badges/${badgeDef.img}`} 
-                      alt={badgeDef.name} 
-                      className="w-14 h-14 object-contain drop-shadow-lg"
-                      onError={(e) => { e.currentTarget.src = "https://cdn-icons-png.flaticon.com/512/5736/5736043.png" }} 
-                    />
+                  {/* WADAH GAMBAR - KLIK UNTUK MUNCULKAN POPUP DETAIL */}
+                  <div 
+                    onClick={() => setSelectedBadge(badge)}
+                    className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center mb-5 relative z-10 p-1 border-2 transition-all duration-300 cursor-pointer
+                    ${isEquipped ? 'border-indigo-500 dark:border-indigo-400 scale-110 shadow-lg' : 'border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/50'}
+                  `}>
+                    <img src={imgSrc} alt={badge.name} className="w-full h-full object-cover rounded-full hover:scale-105 transition-transform" />
+                    {/* Hover text "DETAIL" */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/40 rounded-full text-[10px] font-bold text-white transition-opacity">
+                      DETAIL
+                    </div>
                   </div>
                   
-                  <h3 className={`font-bold text-sm mb-1 text-white`}>{badgeDef.name}</h3>
-                  <p className="text-[10px] text-gray-500 leading-tight flex-grow mb-4">{badgeDef.desc}</p>
-                  
-                  {/* TOMBOL PASANG (Hanya muncul di profil sendiri untuk medali yang sudah dimiliki) */}
-                  {isMyProfile && isOwned && (
-                     <button 
-                       onClick={() => handleEquipBadge(badgeDef)}
-                       disabled={equippedBadge?.req_id === badgeDef.req_id}
-                       className={`w-full text-xs font-bold py-2 rounded-lg transition ${
-                         equippedBadge?.req_id === badgeDef.req_id ? 'bg-primary text-white cursor-default'
-                         : 'bg-gray-700 hover:bg-gray-600 text-white shadow-md'
-                       }`}
-                     >
-                       {equippedBadge?.req_id === badgeDef.req_id ? 'Dipajang' : 'Pasang di Profil'}
-                     </button>
-                  )}
-                  
-                  {!isOwned && (
-                       <div className="w-full text-[10px] py-1 text-gray-600 font-medium bg-gray-800/50 rounded-lg">Belum Didapat</div>
+                  <h3 className="font-bold text-slate-800 dark:text-white mb-2 relative z-10 leading-tight">{badge.name}</h3>
+                  <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium mb-6 flex-1 relative z-10 leading-relaxed px-2">
+                    {badge.desc}
+                  </p>
+
+                  {/* TOMBOL AKSI (Hanya muncul jika ini profil sendiri) */}
+                  {isMyProfile && (
+                    <button
+                      disabled={!isOwned}
+                      onClick={() => toggleBadge(badge.id)}
+                      className={`w-full py-3 rounded-xl font-bold text-xs tracking-wider transition-all duration-300 relative z-10
+                        ${!isOwned ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-700' : 
+                          isEquipped ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)] border border-indigo-400' : 
+                          'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-300 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 hover:border-indigo-500/50'}
+                      `}
+                    >
+                      {!isOwned ? "TERKUNCI" : isEquipped ? "DIPAJANG" : "PASANG"}
+                    </button>
                   )}
                 </div>
               )
             })}
           </div>
-        )}
-      </div>
+        </div>
+
+      </main>
+
+      {/* ============================================================== */}
+      {/* POP-UP MODAL DETAIL BADGE (SUPPORT LIGHT/DARK MODE)            */}
+      {/* ============================================================== */}
+      {selectedBadge && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-[#13192B] border-2 border-indigo-200 dark:border-indigo-500/50 p-8 rounded-[3rem] max-w-sm w-full text-center relative shadow-2xl">
+            <button 
+              onClick={() => setSelectedBadge(null)}
+              className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition font-bold"
+            >
+              ✕
+            </button>
+            
+            <div className="w-32 h-32 mx-auto mb-6 rounded-full border-4 border-indigo-400 dark:border-indigo-500 p-1 shadow-[0_0_40px_rgba(99,102,241,0.3)] bg-slate-50 dark:bg-[#0B0F19]">
+              <img src={selectedBadge.img.startsWith('/') ? selectedBadge.img : `/badges/${selectedBadge.img}`} alt={selectedBadge.name} className="w-full h-full object-cover rounded-full" />
+            </div>
+
+            <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-2">{selectedBadge.name}</h2>
+            
+            <div className={`text-[10px] py-1.5 px-4 rounded-full inline-block font-bold tracking-widest mb-6 
+              ${ownedBadges.includes(selectedBadge.id) ? 'bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400 border border-green-300 dark:border-green-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700'}`}
+            >
+              {ownedBadges.includes(selectedBadge.id) ? "TELAH DIMILIKI" : "BELUM TERBUKA"}
+            </div>
+            
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl text-left border border-slate-200 dark:border-white/5 shadow-inner">
+              <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                <span>💡</span> Cara Mendapatkan:
+              </p>
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                {selectedBadge.hint}
+              </p>
+            </div>
+
+            <button 
+              onClick={() => setSelectedBadge(null)}
+              className="mt-8 w-full py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-500 transition-all shadow-lg hover:shadow-indigo-500/20"
+            >
+              MENGERTI
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================== */}
+      {/* CUSTOM POP-UP ALERT (PENGGANTI ALERT JS)   */}
+      {/* ========================================== */}
+      {customAlert && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-[#13192B] border border-slate-200 dark:border-slate-700 w-full max-w-sm rounded-[2rem] p-8 shadow-2xl transform transition-all animate-bounce-in text-center relative overflow-hidden">
+            
+            {/* Garis Warna di Atas */}
+            <div className={`absolute top-0 left-0 w-full h-2 ${
+              customAlert.type === 'success' ? 'bg-green-500' : 
+              customAlert.type === 'error' ? 'bg-red-500' : 'bg-indigo-500'
+            }`}></div>
+
+            <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-5 shadow-inner ${
+              customAlert.type === 'success' ? 'bg-green-100 dark:bg-green-900/50 text-green-500' : 
+              customAlert.type === 'error' ? 'bg-red-100 dark:bg-red-900/50 text-red-500' : 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-500'
+            }`}>
+              <span className="text-4xl animate-bounce">
+                {customAlert.type === 'success' ? '✨' : customAlert.type === 'error' ? '⚠️' : '💡'}
+              </span>
+            </div>
+
+            <h3 className="text-2xl font-black text-slate-800 dark:text-white mb-3">{customAlert.title}</h3>
+            <p className="text-slate-600 dark:text-slate-300 font-medium mb-8 leading-relaxed whitespace-pre-wrap">
+              {customAlert.desc}
+            </p>
+
+            <button 
+              onClick={() => setCustomAlert(null)} 
+              className={`w-full py-4 rounded-xl font-black text-white shadow-lg transition-transform hover:-translate-y-1 ${
+                customAlert.type === 'success' ? 'bg-green-500 hover:bg-green-600 shadow-green-500/30' : 
+                customAlert.type === 'error' ? 'bg-red-500 hover:bg-red-600 shadow-red-500/30' : 'bg-indigo-500 hover:bg-indigo-600 shadow-indigo-500/30'
+              }`}
+            >
+              Oke, Mengerti!
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   )

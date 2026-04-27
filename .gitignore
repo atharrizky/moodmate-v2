@@ -31,7 +31,7 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (SANGAT PENTING: Jangan ubah ini agar password Supabase aman)
+# env files (SANGAT PENTING: Jangan ubah ini agar password Supabase & API Groq aman)
 .env*
 !.env.example
 
@@ -59,9 +59,11 @@ next-env.d.ts
 supabase/.temp/
 supabase/.branch/
 
-# Python (Jika ada script tambahan)
+# Python / Virtual Environment (Jika ada script tambahan)
 __pycache__/
 *.py[cod]
 *$py.class
 venv/
 env/
+.venv
+.venv/
