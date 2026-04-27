@@ -57,8 +57,8 @@ export default function Leaderboard() {
       
       const pendingIds = pendingRequests ? pendingRequests.map(p => p.user_id) : []
       
-      let incomingProfilesData = []
-      if (pendingIds.length > 0) {
+        let incomingProfilesData: any[] = []     
+        if (pendingIds.length > 0) {
         const { data: pProfiles } = await supabase
           .from('profiles')
           .select('id, username, level')
