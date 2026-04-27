@@ -6,9 +6,9 @@ import Navbar from "@/components/Navbar"
 import MoodGrid from "@/components/MoodGrid"
 import StatCard from "@/components/StatCard"
 import QuoteCarousel from "@/components/QuoteCarousel"
-import { getUser } from "@/lib/storage"
 import Link from "next/link"
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { supabase } from "@/lib/supabase" // <-- Import Supabase baru kita!
 
 const MOOD_COLORS: Record<string, string> = {
   Joy: "#facc15", Trust: "#4ade80", Fear: "#f97316", Surprise: "#ec4899",
@@ -23,52 +23,130 @@ export default function Dashboard() {
   const router = useRouter()
 
   useEffect(() => {
-    const data = getUser()
-    if (!data) {
-      router.push("/login")
-      return
-    }
-    setUser(data)
-
-    if (data.entries.length === 0) {
-      setShowIntroModal(true)
-    }
-    
-    const moodCounts: Record<string, number> = {}
-    data.entries.forEach((entry: any) => {
-      const m = entry.finalMood || entry.mood
-      if (m && m !== "undefined") {
-        const formattedMood = m.charAt(0).toUpperCase() + m.slice(1)
-        moodCounts[formattedMood] = (moodCounts[formattedMood] || 0) + 1
+    const fetchData = async () => {
+      // 1. Cek apakah ada user yang sedang login di Supabase
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/login")
+        return
       }
-    })
-    
-    setChartData(Object.keys(moodCounts).map(key => ({
-      name: key, count: moodCounts[key]
-    })))
 
-    const last7Days = []
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date()
-      d.setDate(d.getDate() - i)
-      const dateString = d.toLocaleDateString('en-CA') 
+      const userId = session.user.id
+
+      // 2. Ambil Profil Gamifikasi (Level, Koin, Username) dari Supabase
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
       
-      const entryToday = data.entries.find((e: any) => 
-        new Date(e.date).toLocaleDateString('en-CA') === dateString
-      )
-      last7Days.push({
-        dayName: d.toLocaleDateString('id-ID', { weekday: 'short' }),
-        dateNum: d.getDate(),
-        mood: entryToday ? (entryToday.finalMood || entryToday.mood) : null
+      // 3. Ambil Semua Jurnal milik user ini
+      const { data: journals } = await supabase
+        .from('journals')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+
+      // 4. Ambil Info Peliharaan yang sedang dipakai (jika ada)
+      let petName = null
+      if (profile?.equipped_pet_id) {
+         const { data: pet } = await supabase
+           .from('pets')
+           .select('name')
+           .eq('id', profile.equipped_pet_id)
+           .single()
+         if (pet) petName = pet.name.toLowerCase()
+      }
+
+      const entries = journals || []
+      
+      // Tampilkan Intro Modal jika belum ada jurnal sama sekali
+      if (entries.length === 0) {
+        setShowIntroModal(true)
+      }
+      
+      // --- LOGIKA CHART MOOD ---
+      const moodCounts: Record<string, number> = {}
+      entries.forEach((entry: any) => {
+        const m = entry.mood
+        if (m) {
+          const formattedMood = m.charAt(0).toUpperCase() + m.slice(1).toLowerCase()
+          moodCounts[formattedMood] = (moodCounts[formattedMood] || 0) + 1
+        }
+      })
+      
+      setChartData(Object.keys(moodCounts).map(key => ({
+        name: key, count: moodCounts[key]
+      })))
+
+      // --- LOGIKA 7 HARI TERAKHIR ---
+      const last7Days = []
+      const formatLocal = (d: Date) => {
+        const yyyy = d.getFullYear()
+        const mm = String(d.getMonth() + 1).padStart(2, '0')
+        const dd = String(d.getDate()).padStart(2, '0')
+        return `${yyyy}-${mm}-${dd}`
+      }
+
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date()
+        d.setDate(d.getDate() - i)
+        const dateString = formatLocal(d)
+        
+        const entryToday = entries.find((e: any) => {
+          const entryDate = new Date(e.created_at)
+          return formatLocal(entryDate) === dateString
+        })
+        
+        last7Days.push({
+          dayName: d.toLocaleDateString('id-ID', { weekday: 'short' }),
+          dateNum: d.getDate(),
+          mood: entryToday ? entryToday.mood.toLowerCase() : null
+        })
+      }
+      setWeeklyData(last7Days)
+
+      // --- LOGIKA STREAK ---
+      let currentStreak = 0;
+      const uniqueDates = Array.from(new Set(entries.map((e: any) => formatLocal(new Date(e.created_at)))));
+      
+      const today = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      const todayStr = formatLocal(today);
+      const yesterdayStr = formatLocal(yesterday);
+
+      if (uniqueDates.includes(todayStr) || uniqueDates.includes(yesterdayStr)) {
+          let checkDate = new Date(uniqueDates.includes(todayStr) ? todayStr : yesterdayStr);
+          while (true) {
+              if (uniqueDates.includes(formatLocal(checkDate))) {
+                  currentStreak++;
+                  checkDate.setDate(checkDate.getDate() - 1);
+              } else {
+                  break;
+              }
+          }
+      }
+
+      // 5. Masukkan data asli ke State UI kita
+      setUser({
+        name: profile?.username || "User",
+        level: profile?.level || 1,
+        points: profile?.coins || 0,
+        entries: entries,
+        streak: currentStreak,
+        activePet: petName
       })
     }
-    setWeeklyData(last7Days)
 
+    fetchData()
   }, [router])
 
-  if (!user) return null
+  // Tampilkan layar kosong sementara agar tidak error saat menunggu data
+  if (!user) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Memuat Data...</div>
 
-  const activePet = user.activePet || (user.pets.length > 0 ? user.pets[user.pets.length - 1] : null)
+  const activePet = user.activePet
 
   return (
     <div className="min-h-screen bg-background relative">
@@ -92,7 +170,7 @@ export default function Dashboard() {
           <StatCard title="Streak 🔥" value={`${user.streak} Hari`} />
         </div>
 
-        {/* MOOD CHECK-IN SECTION (BEBAS WRAP KE BAWAH) */}
+        {/* MOOD CHECK-IN SECTION */}
         <div className="bg-[#111827] border border-gray-800 p-5 sm:p-8 rounded-2xl shadow-sm w-full mb-6 sm:mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
             <div>

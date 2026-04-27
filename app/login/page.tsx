@@ -1,54 +1,147 @@
-"use client"
-import { useState, useEffect } from "react"
-import { loginUser, getActiveUserEmail } from "@/lib/storage"
-import { useRouter } from "next/navigation"
+'use client';
 
-export default function Login() {
-  const [name, setName] = useState("")
-  const router = useRouter()
+import { useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
-  useEffect(() => {
-    if (getActiveUserEmail()) {
-      router.push("/dashboard")
+export default function LoginPage() {
+  const router = useRouter();
+  const [isLogin, setIsLogin] = useState(true); // True = Halaman Login, False = Halaman Register
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  // Form Data
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState(''); // Hanya dipakai saat Register
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMsg('');
+
+    try {
+      if (isLogin) {
+        // PROSES LOGIN
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+        
+        // Kalau sukses, lempar ke Dashboard
+        router.push('/dashboard');
+        
+      } else {
+        // PROSES REGISTER
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              username: username, // Ini akan ditangkap oleh Robot Trigger kita tadi!
+            },
+          },
+        });
+        if (error) throw error;
+        
+        alert('Registrasi berhasil! Silakan login sekarang.');
+        setIsLogin(true); // Pindah ke mode login setelah sukses daftar
+      }
+    } catch (error: any) {
+      setErrorMsg(error.message || 'Terjadi kesalahan');
+    } finally {
+      setLoading(false);
     }
-  }, [router])
-
-  function handleLogin() {
-    if(!name.trim()) {
-        alert("Masukkan nama panggilanmu dulu ya!"); 
-        return;
-    }
-    
-    // Gunakan fungsi loginUser yang baru (tidak akan menghapus data lama jika nama sama)
-    loginUser(name)
-    router.push("/dashboard")
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-5">
-      <div className="bg-[#111827] border border-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
-        <h1 className="text-3xl font-bold text-white mb-2">MoodMate 🌙</h1>
-        <p className="text-gray-400 mb-8">Kenali emosimu, sayangi dirimu.</p>
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+      <div className="bg-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-700">
+        
+        {/* Tombol Kembali ke Home */}
+        <Link href="/" className="text-slate-400 hover:text-white text-sm mb-6 inline-block">
+          &larr; Kembali
+        </Link>
 
-        <div className="flex flex-col gap-4 text-left">
+        <h1 className="text-3xl font-bold text-white mb-2 text-center">
+          {isLogin ? 'Selamat Datang Kembali' : 'Buat Akun Baru'}
+        </h1>
+        <p className="text-slate-400 mb-8 text-center">
+          {isLogin ? 'Masuk untuk melanjutkan jurnalmu.' : 'Mulai perjalanan jurnalmu hari ini.'}
+        </p>
+
+        {errorMsg && (
+          <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded-lg mb-6 text-sm text-center">
+            {errorMsg}
+          </div>
+        )}
+
+        <form onSubmit={handleAuth} className="space-y-4">
+          
+          {/* Form Username (Hanya Muncul Saat Register) */}
+          {!isLogin && (
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Username (Nama Panggilan)</label>
+              <input
+                type="text"
+                required={!isLogin}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-green-500"
+                placeholder="Misal: Athar"
+              />
+            </div>
+          )}
+
           <div>
-            <label className="text-sm text-gray-400 mb-2 block">Nama Panggilan</label>
-            <input 
-              className="w-full bg-[#0f172a] border border-gray-700 p-4 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary transition" 
-              placeholder="Masukkan namamu (cth: Athar)"
-              value={name}
-              onChange={e => setName(e.target.value)}
+            <label className="block text-sm font-medium text-slate-300 mb-1">Email</label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-green-500"
+              placeholder="email@contoh.com"
             />
           </div>
 
-          <button 
-            className="mt-4 bg-primary hover:bg-purple-500 text-white font-medium py-3 rounded-xl transition duration-200 shadow-md w-full" 
-            onClick={handleLogin}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Password</label>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-green-500"
+              placeholder="Minimal 6 karakter"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 bg-green-500 hover:bg-green-600 text-slate-900 font-bold rounded-lg transition-all mt-4 disabled:opacity-50"
           >
-            Mulai Perjalanan
+            {loading ? 'Memproses...' : isLogin ? 'Masuk' : 'Daftar Sekarang'}
+          </button>
+        </form>
+
+        <div className="mt-6 text-center text-sm text-slate-400">
+          {isLogin ? "Belum punya akun? " : "Sudah punya akun? "}
+          <button
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setErrorMsg('');
+            }}
+            className="text-green-400 hover:text-green-300 font-medium"
+          >
+            {isLogin ? 'Daftar di sini' : 'Login di sini'}
           </button>
         </div>
+
       </div>
     </div>
-  )
+  );
 }

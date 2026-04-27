@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { getUser } from "@/lib/storage"
+import { supabase } from "@/lib/supabase" // Ganti getUser dengan ini
 import html2canvas from "html2canvas"
 
 const affirmations = [
@@ -30,20 +30,62 @@ export default function ResultPage() {
   const cardRef = useRef<HTMLDivElement>(null)
   
   const [entry, setEntry] = useState<any>(null)
-  const [user, setUser] = useState<any>(null)
+  const [userProfile, setUserProfile] = useState<any>(null)
   const [showModal, setShowModal] = useState(true)
   const [countdown, setCountdown] = useState(6)
   const [quote] = useState(affirmations[Math.floor(Math.random() * affirmations.length)])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const data = getUser()
-    if (!data || data.entries.length === 0) {
+    fetchLatestData()
+  }, [])
+
+  async function fetchLatestData() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/login")
+        return
+      }
+
+      // 1. Ambil Jurnal Terakhir dari Supabase
+      const { data: latestJournal, error: jError } = await supabase
+        .from('journals')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (jError) throw jError
+
+      // 2. Ambil Profil (untuk Pet & Name)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*, equipped_pet_id')
+        .eq('id', session.user.id)
+        .single()
+
+      // 3. Ambil Nama Pet jika ada
+      let petName = null
+      if (profile?.equipped_pet_id) {
+        const { data: pet } = await supabase
+          .from('pets')
+          .select('name')
+          .eq('id', profile.equipped_pet_id)
+          .single()
+        petName = pet?.name.toLowerCase()
+      }
+
+      setEntry(latestJournal)
+      setUserProfile({ ...profile, activePet: petName })
+    } catch (err) {
+      console.error("Error loading result:", err)
       router.push("/dashboard")
-      return
+    } finally {
+      setLoading(false)
     }
-    setUser(data)
-    setEntry(data.entries[data.entries.length - 1])
-  }, [router])
+  }
 
   useEffect(() => {
     if (!showModal) return
@@ -60,28 +102,30 @@ export default function ResultPage() {
     return () => clearInterval(timer)
   }, [showModal])
 
-  if (!entry) return null
-
-  const activeMood = entry.finalMood || entry.mood || "default"
-  const theme = moodThemes[activeMood] || moodThemes.default
-  const activePet = user?.activePet || (user?.pets?.length > 0 ? user.pets[user.pets.length - 1] : null)
-
   const handleDownload = async () => {
-    if (!cardRef.current) return
+    if (!cardRef.current || !entry) return
     try {
+      const theme = moodThemes[entry.mood] || moodThemes.default
       const canvas = await html2canvas(cardRef.current, { scale: 2, backgroundColor: theme.hex })
       const image = canvas.toDataURL("image/png")
       const link = document.createElement("a")
       link.href = image
-      link.download = `MoodMate_Reflection.png`
+      link.download = `MoodMate_Reflection_${new Date().getTime()}.png`
       link.click()
     } catch (err) {
       console.error("Gagal mendownload gambar", err)
     }
   }
 
+  if (loading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Menyiapkan kartu apresiasi...</div>
+  if (!entry) return null
+
+  const activeMood = entry.mood || "default"
+  const theme = moodThemes[activeMood] || moodThemes.default
+  const activePet = userProfile?.activePet
+
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center pt-24 pb-12 px-5 relative overflow-hidden">
+    <div className="min-h-screen bg-background flex flex-col items-center pt-24 pb-12 px-5 relative overflow-hidden text-white">
       
       <button 
         className="absolute top-8 left-8 text-gray-400 hover:text-white flex items-center gap-2 transition"
@@ -95,7 +139,7 @@ export default function ResultPage() {
         <p className="text-gray-400 mb-6">Here's your wonderful reflection. Feel free to share it!</p>
         
         <p className="text-lg text-gray-300">
-          You went from feeling <span className="font-bold text-white capitalize">{entry.mood}</span> to <span className="font-bold text-white capitalize">{activeMood}</span>.
+          You are feeling <span className="font-bold text-white capitalize">{activeMood}</span>.
         </p>
       </div>
 
@@ -106,7 +150,7 @@ export default function ResultPage() {
         <div className={`flex justify-between items-start mb-8 border-b ${theme.borderClass} pb-4`}>
           <div>
             <h2 className="text-2xl font-bold">
-              {new Date(entry.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              {new Date(entry.created_at).toLocaleDateString('id-ID', { month: 'long', day: 'numeric', year: 'numeric' })}
             </h2>
             <p className="italic opacity-80 mt-1">"Today's Reflections"</p>
           </div>
@@ -114,22 +158,9 @@ export default function ResultPage() {
         </div>
 
         <div className="flex flex-col gap-6">
-          {entry.answers?.map((ans: any, index: number) => (
-            <div key={index}>
-              {/* Cek apakah format lama (string) atau format baru (object) */}
-              {typeof ans === 'string' ? (
-                <>
-                  <p className="font-semibold text-lg mb-1">Catatan {index + 1}</p>
-                  <p className="leading-relaxed opacity-90">{ans}</p>
-                </>
-              ) : (
-                <>
-                  <p className="font-semibold text-lg mb-1">{ans.questionTitle}</p>
-                  <p className="leading-relaxed opacity-90">{ans.answer}</p>
-                </>
-              )}
+            <div className="whitespace-pre-line leading-relaxed opacity-90 text-lg">
+                {entry.content}
             </div>
-          ))}
         </div>
 
         <div className="mt-12 flex justify-between items-end">

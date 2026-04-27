@@ -1,20 +1,38 @@
 "use client"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { logoutUser } from "@/lib/storage"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { supabase } from "@/lib/supabase" // Import Supabase
 
 export default function Navbar() {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
+  const [myUsername, setMyUsername] = useState<string | null>(null)
 
-  function handleLogout() {
-    logoutUser() 
+  useEffect(() => {
+    fetchMyUsername()
+  }, [])
+
+  async function fetchMyUsername() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', session.user.id)
+        .single()
+      
+      if (profile) setMyUsername(profile.username)
+    }
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
     router.push("/login")
   }
 
   return (
-    <header className="fixed top-0 w-full bg-[#0f172a] border-b border-gray-800 z-50">
+    <header className="fixed top-0 w-full bg-[#0f172a]/90 backdrop-blur-sm border-b border-gray-800 z-50">
       <div className="max-w-5xl mx-auto flex items-center justify-between px-5 h-[70px]">
         
         {/* LOGO & BRAND NAME */}
@@ -36,7 +54,15 @@ export default function Navbar() {
           <Link href="/dashboard" className="hover:text-white transition">Dashboard</Link>
           <Link href="/history" className="hover:text-white transition">Riwayat</Link>
           <Link href="/shop" className="hover:text-white transition">Toko Pet</Link>
+          <Link href="/leaderboard" className="hover:text-white transition text-primary">Komunitas</Link>
           
+          {/* Link ke Profil Sendiri (Dinamis) */}
+          {myUsername && (
+            <Link href={`/profile/${myUsername}`} className="flex items-center gap-2 text-white bg-slate-800 px-3 py-1.5 rounded-lg border border-gray-700 hover:border-primary transition">
+              👤 Profil
+            </Link>
+          )}
+
           <button 
             onClick={handleLogout} 
             className="ml-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 px-4 py-2 rounded-xl transition font-semibold text-xs uppercase tracking-wider"
@@ -66,6 +92,14 @@ export default function Navbar() {
           <Link href="/dashboard" onClick={() => setIsOpen(false)} className="hover:text-white transition block py-2 border-b border-gray-800/50">Dashboard</Link>
           <Link href="/history" onClick={() => setIsOpen(false)} className="hover:text-white transition block py-2 border-b border-gray-800/50">Riwayat</Link>
           <Link href="/shop" onClick={() => setIsOpen(false)} className="hover:text-white transition block py-2 border-b border-gray-800/50">Toko Pet</Link>
+          <Link href="/leaderboard" onClick={() => setIsOpen(false)} className="hover:text-white transition block py-2 border-b border-gray-800/50 text-primary">Komunitas</Link>
+          
+          {/* Link Profil Mobile */}
+          {myUsername && (
+            <Link href={`/profile/${myUsername}`} onClick={() => setIsOpen(false)} className="hover:text-white transition block py-2 border-b border-gray-800/50 text-white font-bold">
+               👤 Profil Saya
+            </Link>
+          )}
           
           <button 
             onClick={() => { setIsOpen(false); handleLogout(); }} 
