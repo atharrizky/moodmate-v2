@@ -436,7 +436,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* ACTIVE PET */}
+{/* ACTIVE PET */}
           <div className="bg-white dark:bg-[#13192B] border border-slate-200 dark:border-rose-500/20 p-5 sm:p-6 rounded-3xl shadow-sm flex flex-col w-full relative overflow-hidden h-full">
             <h2 className="text-lg font-bold w-full text-left relative z-10">Peliharaanku</h2>
             
@@ -447,7 +447,18 @@ export default function Dashboard() {
                 </div>
                 <p className="text-rose-600 dark:text-rose-400 font-extrabold capitalize text-xl">{activePet}</p>
                 <p className="text-xs sm:text-sm text-slate-500 dark:text-rose-200/60 mt-1 font-medium">Menemanimu hari ini</p>
-                <Link href="/shop" className="mt-4 text-xs text-slate-500 dark:text-rose-400 hover:underline transition font-bold">Ganti Pet</Link>
+                
+                {/* TOMBOL MINI GAME */}
+                <Link href="/play" className="mt-4 w-full">
+                  <button className="w-full bg-gradient-to-r from-rose-400 to-orange-400 hover:from-rose-500 hover:to-orange-500 text-white text-xs sm:text-sm font-black py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all hover:scale-105 flex items-center justify-center gap-2 uppercase tracking-wide">
+                    <span>🎮</span> Ajak Main
+                  </button>
+                </Link>
+
+                {/* LINK GANTI PET */}
+                <Link href="/shop" className="mt-3 text-xs text-slate-400 dark:text-rose-400/60 hover:text-slate-600 dark:hover:text-rose-300 hover:underline transition font-bold">
+                  Ganti Peliharaan
+                </Link>
               </div>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center relative z-10 w-full mt-2">
